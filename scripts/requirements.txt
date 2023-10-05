@@ -1,0 +1,7 @@
+transformers==4.34.0
+peft==0.4.0
+accelerate==0.23.0
+bitsandbytes==0.41.1
+safetensors>=0.3.3
+packaging
+ninja
