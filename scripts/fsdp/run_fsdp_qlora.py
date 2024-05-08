@@ -115,7 +115,7 @@ def training_function(script_args, training_args):
     model = AutoModelForCausalLM.from_pretrained(
         script_args.model_id,
         quantization_config=quantization_config,
-        attn_implementation="sdpa",  # use sdpa, alternatively use "flash_attention_2"
+        attn_implementation="flash_attention_2",
         torch_dtype=quant_storage_dtype,
         use_cache=(
             False if training_args.gradient_checkpointing else True
@@ -160,6 +160,8 @@ def training_function(script_args, training_args):
     )
     if trainer.accelerator.is_main_process:
         trainer.model.print_trainable_parameters()
+    if trainer.is_fsdp_enabled:
+        trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
 
     ##########################
     # Train model
@@ -169,11 +171,9 @@ def training_function(script_args, training_args):
         checkpoint = training_args.resume_from_checkpoint
     trainer.train(resume_from_checkpoint=checkpoint)
 
-    ##########################
-    # SAVE MODEL FOR SAGEMAKER
-    ##########################
-    if trainer.is_fsdp_enabled:
-        trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
+    ############################
+    # SAVE ADAPTER FOR SAGEMAKER
+    ############################
     trainer.save_model()
 
 
