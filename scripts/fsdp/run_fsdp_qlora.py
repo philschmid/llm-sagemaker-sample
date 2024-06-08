@@ -12,7 +12,6 @@ from transformers import (
     BitsAndBytesConfig,
     set_seed,
 )
-from trl import setup_chat_format
 from peft import LoraConfig
 
 
@@ -57,6 +56,25 @@ class ScriptArguments:
     max_seq_length: int = field(
         default=512, metadata={"help": "The maximum sequence length for SFT Trainer"}
     )
+
+
+def merge_and_save_model(model_id, adapter_dir, output_dir):
+    from peft import PeftModel
+
+    print("Trying to load a Peft model. It might take a while without feedback")
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        low_cpu_mem_usage=True,
+    )
+    peft_model = PeftModel.from_pretrained(base_model, adapter_dir)
+    model = peft_model.merge_and_unload()
+
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Saving the newly created merged model to {output_dir}")
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model.save_pretrained(output_dir, safe_serialization=True)
+    base_model.config.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
 
 
 def training_function(script_args, training_args):
@@ -171,10 +189,21 @@ def training_function(script_args, training_args):
         checkpoint = training_args.resume_from_checkpoint
     trainer.train(resume_from_checkpoint=checkpoint)
 
-    ############################
-    # SAVE ADAPTER FOR SAGEMAKER
-    ############################
+    #########################################
+    # SAVE ADAPTER AND CONFIG FOR SAGEMAKER
+    #########################################
+    # save adapter
+    if trainer.is_fsdp_enabled:
+        trainer.accelerator.state.fsdp_plugin.set_state_dict_type("FULL_STATE_DICT")
     trainer.save_model()
+
+    del model
+    torch.cuda.empty_cache()  # Clears the cache
+    # load and merge
+    with training_args.main_process_first(desc="Merge and save model"):
+        merge_and_save_model(
+            script_args.model_id, training_args.output_dir, "/opt/ml/model"
+        )
 
 
 if __name__ == "__main__":
