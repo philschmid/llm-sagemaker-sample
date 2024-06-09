@@ -71,10 +71,8 @@ def merge_and_save_model(model_id, adapter_dir, output_dir):
 
     os.makedirs(output_dir, exist_ok=True)
     print(f"Saving the newly created merged model to {output_dir}")
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
     model.save_pretrained(output_dir, safe_serialization=True)
     base_model.config.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
 
 
 def training_function(script_args, training_args):
@@ -111,12 +109,11 @@ def training_function(script_args, training_args):
     train_dataset = train_dataset.map(template_dataset, remove_columns=["messages"])
     test_dataset = test_dataset.map(template_dataset, remove_columns=["messages"])
 
-    # print random sample
-    with training_args.main_process_first(
-        desc="Log a few random samples from the processed training set"
-    ):
+    # print random sample on rank 0
+    if training_args.distributed_state.is_main_process:
         for index in random.sample(range(len(train_dataset)), 2):
             print(train_dataset[index]["text"])
+    training_args.distributed_state.wait_for_everyone()  # wait for all processes to print
 
     # Model
     torch_dtype = torch.bfloat16
@@ -198,12 +195,15 @@ def training_function(script_args, training_args):
     trainer.save_model()
 
     del model
+    del trainer
     torch.cuda.empty_cache()  # Clears the cache
     # load and merge
-    with training_args.main_process_first(desc="Merge and save model"):
+    if training_args.distributed_state.is_main_process:
         merge_and_save_model(
             script_args.model_id, training_args.output_dir, "/opt/ml/model"
         )
+        tokenizer.save_pretrained("/opt/ml/model")
+    training_args.distributed_state.wait_for_everyone()  # wait for all processes to print
 
 
 if __name__ == "__main__":
