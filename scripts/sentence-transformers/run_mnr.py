@@ -176,7 +176,7 @@ def training_function(script_args):
 
 if __name__ == "__main__":
     parser = HfArgumentParser((ScriptArguments))
-    script_args, _ = parser.parse_args_into_dataclasses()
+    script_args = parser.parse_args_into_dataclasses()[0]
 
     # set seed
     set_seed(42)
