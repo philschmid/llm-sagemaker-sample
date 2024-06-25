@@ -5,10 +5,22 @@ The repository demonstrates a sample LLMOps pipeline for training, optimizing, d
 
 Currently implemented:
 
+End-to-End:
 - [Training and deploying LLMs on SageMaker](./notebooks/train-deploy-llm.ipynb)
+- [Train and deploy open Embedding Models on Amazon SageMaker](notebooks/train-deploy-embedding-models.ipynb)
+
+Infernece:
+- [Deploy Llama3 on Amazon SageMaker](./notebooks/deploy-llama3.ipynb)
+- [Deploy Mixtral 8x7B on Amazon SageMaker](./notebooks/deploy-mixtral.ipynb)
+- [Scale LLM Inference on Amazon SageMaker with Multi-Replica Endpoints](notebooks/multi-replica-inference-example.ipynb)
 - Optimizing LLMs with Quantization _(coming soon)_
-- LLMOps pipeline for training, optimizing, and deploying LLMs on SageMaker _(coming soon)_
 - Monitoring and managing LLMs with CloudWatch _(coming soon)_
+
+
+Training: 
+- [Train and evaluate LLMs](notebooks/train-evalaute-llms-2024-trl.ipynb)
+
+
 
 ## Contents
 
