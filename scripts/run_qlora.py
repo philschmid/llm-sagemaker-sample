@@ -7,6 +7,8 @@ try:
 except:
     print("flash-attn failed to install")
 
+os.system("pip install -U datasets tokenizer transformers accelerate")
+
 from typing import Optional
 from transformers import (
     AutoModelForCausalLM,
