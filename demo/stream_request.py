@@ -1,4 +1,3 @@
-import gradio as gr
 import boto3
 import json
 import io
@@ -8,7 +7,7 @@ parameters = {
     "stream": True,
     "top_p": 0.9,
     "temperature": 1.0,
-    "max_tokens": 16_000,
+    "max_tokens": 6000,
 }
 
 
@@ -50,8 +49,9 @@ def create_streamer(
 ):
     smr = session.client("sagemaker-runtime")
 
-    def generate(prompt):
-
+    def generate(prompt, max_tokens=4096):
+        # override max_tokens for this request
+        parameters["max_tokens"] = max_tokens
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt},
@@ -74,8 +74,7 @@ def create_streamer(
                 chunk = json.loads(c.lstrip("data:").rstrip("/n"))["choices"][0]
                 if chunk["finish_reason"]:
                     break
-                output += chunk["delta"]["content"]
-                yield output
+                yield chunk["delta"]["content"]
         return output
 
     return generate
